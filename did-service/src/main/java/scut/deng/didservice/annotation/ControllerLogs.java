@@ -6,6 +6,6 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface ControllerLogs {
-    String description() default "";
-    boolean printResponse() default true;
+  String description() default "";
+  boolean printResponse() default true;
 }

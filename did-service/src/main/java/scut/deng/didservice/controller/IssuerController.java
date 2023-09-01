@@ -3,6 +3,7 @@ package scut.deng.didservice.controller;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,7 +12,6 @@ import scut.deng.didservice.exception.MyException;
 import scut.deng.didservice.pojo.response.BaseResponse;
 import scut.deng.didservice.service.IssuerService;
 
-import java.util.Map;
 
 @RestController
 @Slf4j
@@ -19,20 +19,18 @@ import java.util.Map;
 @RequestMapping("/scutIssuer")
 public class IssuerController {
 
+  @Autowired public IssuerService issuerService;
 
-    @Autowired
-    public IssuerService issuerService;
+  @GetMapping("/getAll")
+  public BaseResponse getAllIssuers() {
+    return issuerService.getIssuerLists();
+  }
 
-    @GetMapping("/getAll")
-    public BaseResponse getAllIssuers(){
-        return issuerService.getIssuerLists();
-    }
-
-    @PostMapping("/applyVC")
-    public BaseResponse applyVC(@RequestBody Map<String, Object> map) throws MyException {
-        JSONObject didInfo = JSONUtil.parseObj(map.get("didInfo"));
-        JSONObject provideData = JSONUtil.parseObj(map.get("provideData"));
-        return issuerService.applyForVC(didInfo,provideData);
-    }
-
+  @PostMapping("/applyVC")
+  public BaseResponse applyVC(@RequestBody Map<String, Object> map)
+      throws MyException {
+    JSONObject didInfo = JSONUtil.parseObj(map.get("didInfo"));
+    JSONObject provideData = JSONUtil.parseObj(map.get("provideData"));
+    return issuerService.applyForVC(didInfo, provideData);
+  }
 }
