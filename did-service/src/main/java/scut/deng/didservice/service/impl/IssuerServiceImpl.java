@@ -56,9 +56,14 @@ public class IssuerServiceImpl implements IssuerService {
     return BaseResponse.success(JSONUtil.parseArray(body));
   }
 
+  /**
+   * 申请证书。申请毕业证书。
+   * 需要获得学生详情，填写生成证书，然后用自己的DID私钥给默克尔根与整个证书签名。
+   */
   @Override
   public BaseResponse applyForVC(JSONObject didInfo, JSONObject provideData)
       throws MyException {
+    // 1. 先去找找此did对应的信息
     String did_id = didInfo.getStr("did");
     ResponseEntity<Boolean> entity = restTemplate.getForEntity(
         Constant.FABRIC_CLIENT + "getIfDocExist?did={did}", Boolean.class,
@@ -70,6 +75,8 @@ public class IssuerServiceImpl implements IssuerService {
     if (!IdcardUtil.isValidCard(idCard)) {
       throw new MyException("身份证格式不正确/数据库查询不到相关记录");
     }
+
+    // 2. VC构造，学生给出Id卡，我们构造一个证书给它。
     JSONObject VC = new JSONObject(true);
     String uuid = IdUtil.simpleUUID();
     VC.set("uuid", uuid);
@@ -80,7 +87,7 @@ public class IssuerServiceImpl implements IssuerService {
     VC.set("expirationDate", now.plusYears(30).toString());
     JSONObject jsonObject = new JSONObject(true);
     jsonObject.set("id", didInfo.getStr("did"));
-    String hideCard = StrUtil.hide(idCard, 4, 4);
+    String hideCard = StrUtil.hide(idCard, 4, 4); // 这个StrUtil是hutool里的。
     jsonObject.set("idCard", hideCard);
     jsonObject.set("school", "华南理工大学");
     jsonObject.set("degree", "本科");
@@ -90,13 +97,15 @@ public class IssuerServiceImpl implements IssuerService {
     ArrayList<String> attributeList = CollUtil.newArrayList(
         "idCard", "school", "degree", "degreeType", "college", "date");
 
+    // 3. 取出DID私钥和DID
     /*取出学校DID的私钥用于加密*/
-    if (!Enterprisedict.containsKey(KEY_1)) {
+    if (!Enterprisedict.containsKey(KEY_1)) { // 看来KEY_1就是指自己的私钥
       throw new MyException("学校的DID还没有生成！");
     }
     String sk = Enterprisedict.getStr(KEY_1);
     String did = Enterprisedict.getStr(DID);
 
+    // 4. 计算默克尔根，对结果签名，加上signer，放进VC的subject字段。
     /*生成默克尔树*/
     ArrayList<String> list = CollUtil.newArrayList(
         hideCard, "华南理工大学", "本科", "工科", "计算机学院", "2023-6-19");
@@ -111,6 +120,7 @@ public class IssuerServiceImpl implements IssuerService {
     VC.set("credentialSubject", jsonObject);
     VC.set("revocation", "https://www.scut.edu.cn");
 
+    // 5. 把整个VC用私钥签名，再塞VC的proof字段里头
     Proof proof = new Proof();
     // 使用私钥将密文加密
     String docString = JSONUtil.toJsonStr(BeanUtil.beanToMap(VC));
@@ -120,6 +130,7 @@ public class IssuerServiceImpl implements IssuerService {
     proof.setSignatureValue(encstring);
     VC.set("proof", proof);
 
+    // 6. 刷新VCdict里的uuid及其merkle和attribute的值。调整uuid对应的默克尔树根值。
     VCdict.set(uuid, VC);
     VCdict.set(uuid + MERKLE,
                merkleTreeUtil.returnTree()); // 存储VC属性的全部默克尔树节点数据
