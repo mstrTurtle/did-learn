@@ -15,6 +15,9 @@ import scut.deng.didservice.pojo.response.BaseResponse;
 import scut.deng.didservice.service.RegisterCenterService;
 
 
+/**
+ * 这玩意儿是Issuer中心
+ */
 @RestController
 @Slf4j
 @RequestMapping("/registerCenter")
@@ -22,10 +25,10 @@ import scut.deng.didservice.service.RegisterCenterService;
 public class RegisterCenterController {
 
   @Autowired public RegisterCenterService registerCenterService;
+
   @PostMapping("/register")
   public BaseResponse registerIssuer(@RequestBody @Validated DIDInfo data)
       throws MyException {
-
     return registerCenterService.registerIssuer(data);
   }
 

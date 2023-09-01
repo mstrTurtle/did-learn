@@ -13,6 +13,9 @@ import scut.deng.didservice.pojo.response.BaseResponse;
 import scut.deng.didservice.service.IssuerService;
 
 
+/**
+ * 这玩意儿不知道干啥的。
+ */
 @RestController
 @Slf4j
 @AllArgsConstructor
@@ -26,6 +29,9 @@ public class IssuerController {
     return issuerService.getIssuerLists();
   }
 
+  /**
+   * body包括DidInfo和ProvideData
+   */
   @PostMapping("/applyVC")
   public BaseResponse applyVC(@RequestBody Map<String, Object> map)
       throws MyException {
