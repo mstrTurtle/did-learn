@@ -50,6 +50,9 @@ public class DidController {
     return docService.createDID(type, comment);
   }
 
+  /**
+   * 所谓did request就是{"did": xxxxx}
+   */
   @PostMapping(value = "/getDoc")
   public BaseResponse getDIDDoc(@RequestBody DIDRequest didRequest) {
     return docService.getDIDDoc(didRequest.getDid());

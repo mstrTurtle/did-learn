@@ -4,6 +4,9 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
+/**
+ * 项目上并没有用到这个
+ */
 @Data
 public class Issuer {
     private int id;

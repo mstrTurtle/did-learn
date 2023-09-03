@@ -5,6 +5,9 @@ import lombok.Data;
 
 import java.time.LocalDate;
 
+/**
+ * 项目上并没有用到这个
+ */
 @Data
 public class PredefinedMaterials {
   public String name;                   // 姓名

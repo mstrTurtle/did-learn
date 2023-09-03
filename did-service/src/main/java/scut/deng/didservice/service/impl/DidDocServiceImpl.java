@@ -44,6 +44,9 @@ public class DidDocServiceImpl implements DidDocService {
   @Resource(name = "VCdict") public Dict VCdict;
   @Autowired public RestTemplate restTemplate;
 
+  /**
+   * 创建DID
+   */
   @Override
   public BaseResponse createDID(String type, String comment)
       throws MyException {
@@ -94,11 +97,14 @@ public class DidDocServiceImpl implements DidDocService {
     return BaseResponse.success(newDID);
   }
 
+  /**
+   * 用did去找公链DID Doc
+   */
   @Override
   public BaseResponse getDIDDoc(String did) {
 
     ResponseEntity<String> response = restTemplate.getForEntity(
-        Constant.FABRIC_CLIENT + "getDoc?did={did}", String.class, did);
+        Constant.FABRIC_CLIENT + "getDoc?did={did}", String.class, did); /* 去找公链要DOC */
     if (response.getStatusCodeValue() != 200 || response.getBody() == null) {
       return BaseResponse.failure(ErrorCode.NO_DIDDOC);
     }
@@ -106,6 +112,9 @@ public class DidDocServiceImpl implements DidDocService {
     return BaseResponse.success(jsonObject);
   }
 
+  /**
+   * 去找公链要所有DID Doc。应该只是用作演示作用。
+   */
   @Override
   public BaseResponse getAllDoc() {
     ResponseEntity<String> response =
@@ -120,6 +129,9 @@ public class DidDocServiceImpl implements DidDocService {
     return BaseResponse.success(jsonArray);
   }
 
+  /**
+   * 把VCdict的value转成json里的list，然后返回。
+   */
   @Override
   public BaseResponse getMyVC() {
     JSONArray array = new JSONArray();
@@ -128,21 +140,32 @@ public class DidDocServiceImpl implements DidDocService {
     return BaseResponse.success(array);
   }
 
+  /**
+   * 扭曲地构造一个及其奇葩的Json对象 —— VC
+   */
   @Override
   public BaseResponse applyForVP(String uuid, String[] indexVec)
       throws MyException {
+    // 1.1 从VCdict里通过uuid找VC
     if (!VCdict.containsKey(uuid)) {
       return new BaseResponse(999, "无法查到该uuid对应的VC，请检查参数！");
     }
+
+    // 1.2 再拿出uuid伴随的MERKLE，ATTRIBUTE子项, 和VC
     String VCStr = VCdict.getStr(uuid);
-    String[] tree = (String[])VCdict.get(uuid + MERKLE);
+    String[] tree = (String[])VCdict.get(uuid + MERKLE); // merkle
     ArrayList<String> attributeList =
-        (ArrayList<String>)VCdict.get(uuid + ATTRIBUTE);
-    JSONObject VC = JSONUtil.parseObj(VCStr, true, true);
+        (ArrayList<String>)VCdict.get(uuid + ATTRIBUTE); // attribute
+    JSONObject VC = JSONUtil.parseObj(VCStr, true, true); // 主体弄出来，把revocation和proof拿掉
     VC.remove("revocation");
     VC.remove("proof");
+
+
+    // 2. 把credentialSubject替换掉，为此构造newCredential
     JSONObject credentialSubject = VC.getJSONObject("credentialSubject");
     JSONObject newCredential = new JSONObject(true);
+
+    // 2.1 新Cre里有array，需要填充一些Object进去
     JSONArray array = new JSONArray();
     newCredential.set("id", credentialSubject.getStr("id"));
     List<String> attribute = (List<String>)VCdict.get(uuid + ATTRIBUTE);
@@ -151,6 +174,7 @@ public class DidDocServiceImpl implements DidDocService {
       if (i >= attribute.size()) {
         return new BaseResponse(999, "传递认证的参数超出范围");
       }
+      // 2.1.1 构造object，内含dataIndex，attribute, merklePath。并且加入array。
       JSONObject object = new JSONObject(true);
       object.set("dataIndex", Integer.parseInt(index));
       object.set(attribute.get(i), credentialSubject.getStr(attribute.get(i)));
@@ -158,15 +182,19 @@ public class DidDocServiceImpl implements DidDocService {
                  MerkleTreeUtil.getMerklePath(
                      attributeList.toArray(attribute.toArray(new String[0])),
                      tree, i));
+      // 2.1.2 把object塞进array
       array.set(object);
     }
+    // 2.2 把array塞进新Cre，把其他属性塞进新cre
     newCredential.set("properties", array);
     newCredential.set("merkleRoot", credentialSubject.getStr("merkleRoot"));
     newCredential.set("rootSignature",
                       credentialSubject.getStr("rootSignature"));
     newCredential.set("signer", credentialSubject.getStr("signer"));
+    // 2.3 完成新Cre替换
     VC.replace("credentialSubject", newCredential);
 
+    // 3. 去DIDdict里找
     /*取出用户的did用户加密*/
     /*取出学校DID的私钥用于加密*/
     if (!DIDdict.containsKey(KEY_1)) {
@@ -178,6 +206,7 @@ public class DidDocServiceImpl implements DidDocService {
     String docString = JSONUtil.toJsonStr(BeanUtil.beanToMap(VC));
     String encstring = EncUtil.digestMsgUseSK(docString, sk);
 
+    // 4. 往VC里塞proof，内含type, creator, sign
     Proof proof = new Proof();
     proof.setType("rsa");
     proof.setCreator(did);
@@ -189,6 +218,9 @@ public class DidDocServiceImpl implements DidDocService {
     return BaseResponse.success(VC);
   }
 
+  /**
+   * 将私钥存在本地，属于此类的private方法。
+   */
   public void storeInCache(String type, String sk, String sk_recover,
                            String did) throws MyException {
     if (type.equals(ENTERPRISE)) {

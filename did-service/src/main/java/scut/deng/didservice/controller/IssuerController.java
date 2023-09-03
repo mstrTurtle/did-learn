@@ -31,6 +31,8 @@ public class IssuerController {
 
   /**
    * body包括DidInfo和ProvideData
+   * 其实apply是申请的意思。也就是：申请VC。
+   * 功能：申请证书。
    */
   @PostMapping("/applyVC")
   public BaseResponse applyVC(@RequestBody Map<String, Object> map)

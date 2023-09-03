@@ -7,6 +7,10 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+/**
+ * 企业找黄页登记自己的时候，给黄页的数据结构。
+ * 这个在黄页相关的Controller和Service里用到了。
+ */
 @Data
 public class DIDInfo {
 
